@@ -50,3 +50,11 @@ Hostnames: [{"192.168.1.42":["domain1.localdomain."]},{"192.168.1.76":["domain2.
 ### Note about threads
 
 Depending on the number of IPs to check, this list will be divided by the number of threads specified and each "thread" will spin off a go routine to check off that chunk of IPs.
+
+
+### Build executeables
+
+#### Windows
+`GOOS=windows go build -o reverse-dns-enum.exe`
+#### Linux
+`go build -o reverse-dns-enum.exe`
