@@ -108,7 +108,7 @@ func TestParseCIDRNotation(t *testing.T) {
 	}
 }
 
-func TestGetHostNames(t *testing.T) {
+func TestGetHostNamesSuccess(t *testing.T) {
 	// Test with a valid address and resolver
 	addresses := []string{"8.8.8.8"}
 	r := net.Resolver{}
@@ -122,17 +122,26 @@ func TestGetHostNames(t *testing.T) {
 	if len(Hostnames[0]["8.8.8.8"]) == 0 {
 		t.Error("Expected Hostnames[0]['8.8.8.8'] to have a name, got 0")
 	}
+}
 
+func TestGetHostNamesInvalid(t *testing.T) {
 	// Test with an invalid address and resolver
-	addresses = []string{"invalid"}
+	addresses := []string{"invalid"}
+	r := net.Resolver{}
+	wg := sync.WaitGroup{}
+	ctx := context.Background()
 	wg.Add(1)
 	getHostNames(addresses, &r, &wg, ctx)
 	if len(Hostnames) != 1 {
 		t.Errorf("Expected Hostnames to have 1 entry, got %v", len(Hostnames))
 	}
+}
 
+func TestGetHostNamesWgNil(t *testing.T) {
+	addresses := []string{}
+	r := net.Resolver{}
+	ctx := context.Background()
 	// Test with a nil WaitGroup
-	wg.Add(1)
 	getHostNames(addresses, &r, nil, ctx)
 	if len(Hostnames) != 1 {
 		t.Errorf("Expected Hostnames to have 1 entry, got %v", len(Hostnames))

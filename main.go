@@ -124,10 +124,7 @@ func getHostNames(addresses []string, r *net.Resolver, wg *sync.WaitGroup, ctx c
 	}
 	for _, ipAddress := range addresses {
 		names, err := r.LookupAddr(ctx, ipAddress)
-		if err != nil {
-			continue
-		}
-		if len(names) == 0 {
+		if err != nil || len(names) == 0 {
 			continue
 		}
 		m.Lock()
