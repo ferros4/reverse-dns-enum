@@ -14,31 +14,75 @@ import (
 )
 
 var (
-	Hostnames []map[string][]string
-	m         sync.Mutex
+	Hostnames  []map[string][]string
+	DNSServers []string
+	m          sync.Mutex
 )
 
 func main() {
 	ctx := context.Background()
-	dnsServerIp, networkMask, threads := getCommandLineFlags()
-
-	r := &net.Resolver{
-		PreferGo:     true,
-		StrictErrors: false,
-		Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
-			d := net.Dialer{
-				Timeout: time.Millisecond * time.Duration(1000),
-			}
-			return d.DialContext(ctx, network, fmt.Sprintf("%s:53", dnsServerIp))
-		},
-	}
+	dnsServerIp, networkMask, findDnsServers, threads := getCommandLineFlags()
 
 	start, finish := parseCIDRNotation(networkMask)
 	addresses := getaddresses(start, finish)
 
 	ipAddressSlices := getIPSlices(threads, addresses)
 	fmt.Printf("Number of slices: %d\n", len(ipAddressSlices))
-	doOutput(ipAddressSlices, r, ctx)
+
+	if findDnsServers {
+		findDns(ipAddressSlices)
+	} else {
+		r := &net.Resolver{
+			PreferGo:     true,
+			StrictErrors: false,
+			Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
+				d := net.Dialer{
+					Timeout: time.Millisecond * time.Duration(1000),
+				}
+				return d.DialContext(ctx, network, fmt.Sprintf("%s:53", dnsServerIp))
+			},
+		}
+		doOutput(ipAddressSlices, r, ctx)
+	}
+
+}
+
+func findDns(ipAddressSlices [][]string) {
+	timeStart := time.Now()
+	wg := new(sync.WaitGroup)
+	for _, ipSlice := range ipAddressSlices {
+		wg.Add(1)
+		go getDns(ipSlice, wg)
+	}
+	wg.Wait()
+	timeFinish := time.Now()
+	hosts, _ := json.Marshal(DNSServers)
+	fmt.Printf("\nTime: %v\nDNS Servers: %v", timeFinish.Sub(timeStart), string(hosts))
+}
+
+func getDns(ipSlice []string, wg *sync.WaitGroup) {
+	if wg != nil {
+		defer wg.Done()
+	}
+	newWG := new(sync.WaitGroup)
+	for _, address := range ipSlice {
+		newWG.Add(1)
+		go doDnsOutput(address, newWG)
+	}
+	newWG.Wait()
+}
+
+func doDnsOutput(address string, wg *sync.WaitGroup) {
+	defer wg.Done()
+	conn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:53", address), time.Second*time.Duration(1))
+	if err != nil && conn == nil {
+		return
+	}
+	_ = conn.Close()
+	fmt.Printf("Found DNS server at:%v\n", address)
+	m.Lock()
+	DNSServers = append(DNSServers, fmt.Sprintf("%v", address))
+	m.Unlock()
 }
 
 func doOutput(ipAddressSlices [][]string, r *net.Resolver, ctx context.Context) {
@@ -70,28 +114,32 @@ func parseCIDRNotation(networkMask string) (uint32, uint32) {
 	return start, finish
 }
 
-func getCommandLineFlags() (string, string, int) {
+func getCommandLineFlags() (string, string, bool, int) {
 	var dnsServerIp string
 	var networkMask string
 	var threads int
-	flag.StringVar(&dnsServerIp, "d", "", "Specify and local DNS server ip address. Example: 192.168.1.155")
+	var findDNSServers bool
 	flag.StringVar(&networkMask, "n", "", "CIDR notation of a newtork to scan. Example: 192.168.255.255/24")
+	flag.BoolVar(&findDNSServers, "f", false, "If true search network for DNS servers and output")
+	flag.StringVar(&dnsServerIp, "d", "", "Specify and local DNS server ip address. Example: 192.168.1.155")
 	flag.IntVar(&threads, "t", 1, "Number of threads")
 	flag.Parse()
 
-	if dnsServerIp == "" {
-		fmt.Printf("Missing dns server argument, Example: -d 192.168.1.155\n")
-		os.Exit(1)
-	}
 	if networkMask == "" {
 		fmt.Printf("Missing network mask. Example: -n 192.168.255.255/24\n")
 		os.Exit(1)
 	}
+
+	if dnsServerIp == "" && findDNSServers == false {
+		fmt.Printf("Missing dns server argument, Example: -d 192.168.1.155\n")
+		os.Exit(1)
+	}
+
 	if reflect.TypeOf(threads).Kind().String() != "int" || threads < 1 {
 		fmt.Printf("Number of threads must be a positive integer\n")
 		os.Exit(1)
 	}
-	return dnsServerIp, networkMask, threads
+	return dnsServerIp, networkMask, findDNSServers, threads
 }
 
 func getaddresses(start uint32, finish uint32) []string {

@@ -7,20 +7,34 @@ Download `executables.zip` and extract.  Available executables:
 reverse-dns-enum.exe
 reverse-dns-enum.sh
 
-## Run
+## Find DNS Servers
+Command line options
+```azure
+-n  (Required) CIDR notation of a newtork to scan. Example: 192.168.255.255/24
+-f  (Required) Find DNS Servers. Example: true
+-t  (Optional) Number of threads.  Default: 1
+
+```
+
+
+## Find hosts by specifying DNS server
 Command line options
 ```azure
 -d   (Required) Specify a local DNS server IP address. Example: 192.168.1.155
 -n   (Required) CIDR notation of a newtork to scan. Example: 192.168.255.255/24
 -t   (Optional) Number of threads.  Default: 1
 ```
-### Linux
+### Find DNS Servers on a network
+#### Linux
+`./reverse-dns-enum -n 192.168.1.255/24 -f true`
+#### Windows
+`reverse-dns-enum.exe -n 192.168.1.255/24 -f true`
 
+### Find hosts with given DNS Server
+#### Linux
 `./reverse-dns-enum -d 192.168.1.1 -n 192.168.1.255/24`
-
-### Windows
-
-`reverse-dns-enum -d 192.168.1.1 -n 192.168.1.255/24`
+#### Windows
+`reverse-dns-enum.exe -d 192.168.1.1 -n 192.168.1.255/24`
 
 ###
 
