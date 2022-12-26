@@ -147,3 +147,145 @@ func TestGetHostNamesWgNil(t *testing.T) {
 		t.Errorf("Expected Hostnames to have 1 entry, got %v", len(Hostnames))
 	}
 }
+
+func TestDoDnsOutput(t *testing.T) {
+	// Test valid DNS server
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go doDnsOutput("8.8.8.8", &wg)
+	wg.Wait()
+	if len(DNSServers) != 1 || DNSServers[0] != "8.8.8.8" {
+		t.Errorf("Expected DNSServers to be [8.8.8.8], got %v", DNSServers)
+	}
+
+	// Test invalid DNS server
+	DNSServers = []string{}
+	wg.Add(1)
+	go doDnsOutput("invalid", &wg)
+	wg.Wait()
+	if len(DNSServers) != 0 {
+		t.Errorf("Expected DNSServers to be [], got %v", DNSServers)
+	}
+}
+
+func TestGetDns(t *testing.T) {
+	// Test valid DNS server addresses
+	DNSServers = []string{}
+	ipSlice := []string{"8.8.8.8", "1.1.1.1"}
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go getDns(ipSlice, &wg)
+	wg.Wait()
+	if len(DNSServers) != 2 || !contains(DNSServers, "8.8.8.8") || !contains(DNSServers, "1.1.1.1") {
+		t.Errorf("Expected DNSServers to be [8.8.8.8, 1.1.1.1], got %v", DNSServers)
+	}
+
+	// Test invalid DNS server addresses
+	DNSServers = []string{}
+	ipSlice = []string{"invalid", "1.1.1.1"}
+	wg.Add(1)
+	go getDns(ipSlice, &wg)
+	wg.Wait()
+	if len(DNSServers) != 1 || DNSServers[0] != "1.1.1.1" {
+		t.Errorf("Expected DNSServers to be [1.1.1.1], got %v", DNSServers)
+	}
+
+	// Test empty DNS server addresses
+	DNSServers = []string{}
+	ipSlice = []string{}
+	wg.Add(1)
+	go getDns(ipSlice, &wg)
+	wg.Wait()
+	if len(DNSServers) != 0 {
+		t.Errorf("Expected DNSServers to be [], got %v", DNSServers)
+	}
+}
+
+func contains(s []string, e string) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
+}
+
+func TestFindDns(t *testing.T) {
+	// Test valid DNS server addresses
+	DNSServers = []string{}
+	ipAddressSlices := [][]string{{"8.8.8.8", "1.1.1.1"}}
+	findDns(ipAddressSlices)
+	if len(DNSServers) != 2 || !contains(DNSServers, "8.8.8.8") || !contains(DNSServers, "1.1.1.1") {
+		t.Errorf("Expected DNSServers to be [8.8.8.8, 1.1.1.1], got %v", DNSServers)
+	}
+
+	// Test invalid DNS server addresses
+	DNSServers = []string{}
+	ipAddressSlices = [][]string{{"invalid", "1.1.1.1"}}
+	findDns(ipAddressSlices)
+	if len(DNSServers) != 1 || DNSServers[0] != "1.1.1.1" {
+		t.Errorf("Expected DNSServers to be [1.1.1.1], got %v", DNSServers)
+	}
+
+	// Test empty DNS server addresses
+	DNSServers = []string{}
+	ipAddressSlices = [][]string{}
+	findDns(ipAddressSlices)
+	if len(DNSServers) != 0 {
+		t.Errorf("Expected DNSServers to be [], got %v", DNSServers)
+	}
+}
+
+func TestDoOutput(t *testing.T) {
+	// Test valid DNS server and IP addresses
+	Hostnames = []map[string][]string{}
+	ipAddressSlices := [][]string{{"8.8.8.8", "1.1.1.1"}}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	doOutput(ipAddressSlices, "8.8.8.8", ctx)
+	if len(Hostnames) != 2 || !containsString(Hostnames, "dns.google") || !containsString(Hostnames, "one.one.one.one") {
+		t.Errorf("Expected Hostnames to be [dns.google, one.one.one.one], got %v", Hostnames)
+	}
+
+	// Test invalid DNS server and valid IP addresses
+	Hostnames = []map[string][]string{}
+	ctx, cancel = context.WithCancel(context.Background())
+	defer cancel()
+	doOutput(ipAddressSlices, "invalid", ctx)
+	if len(Hostnames) != 0 {
+		t.Errorf("Expected Hostnames to be [], got %v", Hostnames)
+	}
+
+	// Test valid DNS server and invalid IP addresses
+	Hostnames = []map[string][]string{}
+	ipAddressSlices = [][]string{{"invalid", "1.1.1.1"}}
+	ctx, cancel = context.WithCancel(context.Background())
+	defer cancel()
+	doOutput(ipAddressSlices, "8.8.8.8", ctx)
+	if len(Hostnames) != 1 || !containsString(Hostnames, "one.one.one.one") {
+		t.Errorf("Expected Hostnames to be [one.one.one.one], got %v", Hostnames)
+	}
+
+	// Test empty IP addresses
+	Hostnames = []map[string][]string{}
+	ipAddressSlices = [][]string{}
+	ctx, cancel = context.WithCancel(context.Background())
+	defer cancel()
+	doOutput(ipAddressSlices, "8.8.8.8", ctx)
+	if len(Hostnames) != 0 {
+		t.Errorf("Expected Hostnames to be [], got %v", Hostnames)
+	}
+}
+
+func containsString(slice []map[string][]string, elem string) bool {
+	for _, item := range slice {
+		for _, strSlice := range item {
+			for _, str := range strSlice {
+				if str == elem {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
