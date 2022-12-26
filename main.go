@@ -32,17 +32,7 @@ func main() {
 	if findDnsServers {
 		findDns(ipAddressSlices)
 	} else {
-		r := &net.Resolver{
-			PreferGo:     true,
-			StrictErrors: false,
-			Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
-				d := net.Dialer{
-					Timeout: time.Millisecond * time.Duration(1000),
-				}
-				return d.DialContext(ctx, network, fmt.Sprintf("%s:53", dnsServerIp))
-			},
-		}
-		doOutput(ipAddressSlices, r, ctx)
+		doOutput(ipAddressSlices, dnsServerIp, ctx)
 	}
 
 }
@@ -85,7 +75,17 @@ func doDnsOutput(address string, wg *sync.WaitGroup) {
 	m.Unlock()
 }
 
-func doOutput(ipAddressSlices [][]string, r *net.Resolver, ctx context.Context) {
+func doOutput(ipAddressSlices [][]string, dnsServerIp string, ctx context.Context) {
+	r := &net.Resolver{
+		PreferGo:     true,
+		StrictErrors: false,
+		Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
+			d := net.Dialer{
+				Timeout: time.Millisecond * time.Duration(1000),
+			}
+			return d.DialContext(ctx, network, fmt.Sprintf("%s:53", dnsServerIp))
+		},
+	}
 	timeStart := time.Now()
 	wg := new(sync.WaitGroup)
 	for _, ipSlice := range ipAddressSlices {

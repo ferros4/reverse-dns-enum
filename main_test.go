@@ -235,3 +235,57 @@ func TestFindDns(t *testing.T) {
 		t.Errorf("Expected DNSServers to be [], got %v", DNSServers)
 	}
 }
+
+func TestDoOutput(t *testing.T) {
+	// Test valid DNS server and IP addresses
+	Hostnames = []map[string][]string{}
+	ipAddressSlices := [][]string{{"8.8.8.8", "1.1.1.1"}}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	doOutput(ipAddressSlices, "8.8.8.8", ctx)
+	if len(Hostnames) != 2 || !containsString(Hostnames, "dns.google") || !containsString(Hostnames, "one.one.one.one") {
+		t.Errorf("Expected Hostnames to be [dns.google, one.one.one.one], got %v", Hostnames)
+	}
+
+	// Test invalid DNS server and valid IP addresses
+	Hostnames = []map[string][]string{}
+	ctx, cancel = context.WithCancel(context.Background())
+	defer cancel()
+	doOutput(ipAddressSlices, "invalid", ctx)
+	if len(Hostnames) != 0 {
+		t.Errorf("Expected Hostnames to be [], got %v", Hostnames)
+	}
+
+	// Test valid DNS server and invalid IP addresses
+	Hostnames = []map[string][]string{}
+	ipAddressSlices = [][]string{{"invalid", "1.1.1.1"}}
+	ctx, cancel = context.WithCancel(context.Background())
+	defer cancel()
+	doOutput(ipAddressSlices, "8.8.8.8", ctx)
+	if len(Hostnames) != 1 || !containsString(Hostnames, "one.one.one.one") {
+		t.Errorf("Expected Hostnames to be [one.one.one.one], got %v", Hostnames)
+	}
+
+	// Test empty IP addresses
+	Hostnames = []map[string][]string{}
+	ipAddressSlices = [][]string{}
+	ctx, cancel = context.WithCancel(context.Background())
+	defer cancel()
+	doOutput(ipAddressSlices, "8.8.8.8", ctx)
+	if len(Hostnames) != 0 {
+		t.Errorf("Expected Hostnames to be [], got %v", Hostnames)
+	}
+}
+
+func containsString(slice []map[string][]string, elem string) bool {
+	for _, item := range slice {
+		for _, strSlice := range item {
+			for _, str := range strSlice {
+				if str == elem {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
