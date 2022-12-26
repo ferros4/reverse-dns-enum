@@ -10,9 +10,9 @@ reverse-dns-enum.sh
 ## Run
 Command line options
 ```azure
--d   Specify a local DNS server IP address. Example: 192.168.1.155
--n   CIDR notation of a newtork to scan. Example: 192.168.255.255/24
--t   Number of threads
+-d   (Required) Specify a local DNS server IP address. Example: 192.168.1.155
+-n   (Required) CIDR notation of a newtork to scan. Example: 192.168.255.255/24
+-t   (Optional) Number of threads.  Default: 1
 ```
 ### Linux
 
