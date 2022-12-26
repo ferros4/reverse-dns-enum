@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"strings"
 	"sync"
 	"time"
 )
@@ -60,14 +59,7 @@ func main() {
 
 	// find the final address
 	finish := (start & mask) | (mask ^ 0xffffffff)
-	var addresses []string
-	// loop through addresses as uint32
-	for i := start; i <= finish; i++ {
-		// convert back to net.IP
-		ip := make(net.IP, 4)
-		binary.BigEndian.PutUint32(ip, i)
-		addresses = append(addresses, ip.String())
-	}
+	addresses := getaddresses(start, finish)
 
 	ipAddressSlices := getIPSlices(threads, addresses)
 	fmt.Printf("Number of slices: %d\n", len(ipAddressSlices))
@@ -81,6 +73,18 @@ func main() {
 	timeFinish := time.Now()
 	hosts, _ := json.Marshal(Hostnames)
 	fmt.Printf("\nTime: %v\nHostnames: %v", timeFinish.Sub(timeStart), string(hosts))
+}
+
+func getaddresses(start uint32, finish uint32) []string {
+	var addresses []string
+	// loop through addresses as uint32
+	for i := start; i <= finish; i++ {
+		// convert back to net.IP
+		ip := make(net.IP, 4)
+		binary.BigEndian.PutUint32(ip, i)
+		addresses = append(addresses, ip.String())
+	}
+	return addresses
 }
 
 func getIPSlices(threads int, addresses []string) [][]string {
@@ -99,9 +103,6 @@ func getHostNames(addresses []string, r *net.Resolver, wg *sync.WaitGroup, ctx c
 	defer wg.Done()
 	for _, ipAddress := range addresses {
 		names, err := r.LookupAddr(ctx, ipAddress)
-		if err != nil && strings.Contains(err.Error(), "no such host") {
-			continue
-		}
 		if err != nil {
 			continue
 		}
