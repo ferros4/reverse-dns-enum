@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/binary"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"net"
@@ -78,7 +79,8 @@ func main() {
 	}
 	wg.Wait()
 	timeFinish := time.Now()
-	fmt.Printf("\nTime: %v\nHostnames: %v", timeFinish.Sub(timeStart), Hostnames)
+	hosts, _ := json.Marshal(Hostnames)
+	fmt.Printf("\nTime: %v\nHostnames: %v", timeFinish.Sub(timeStart), string(hosts))
 }
 
 func getIPSlices(threads int, addresses []string) [][]string {
@@ -90,7 +92,6 @@ func getIPSlices(threads int, addresses []string) [][]string {
 
 		ipAddressSlices = append(ipAddressSlices, addresses[min:max])
 	}
-	fmt.Printf("SLICES: %v", ipAddressSlices)
 	return ipAddressSlices
 }
 
