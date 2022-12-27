@@ -3,7 +3,7 @@ Do FQDN lookups across internal subnets to find hosts.
 
 ## Executables
 
-Download `executables.zip` and extract.  Available executables:
+Download `reverse-dns-enum-executables.zip` and extract.  Available executables:
 reverse-dns-enum.exe
 reverse-dns-enum.sh
 
