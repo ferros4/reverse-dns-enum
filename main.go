@@ -132,7 +132,7 @@ func doDnsOutput(address string, wg *sync.WaitGroup) {
 		return
 	}
 	_ = conn.Close()
-	//fmt.Printf("Found DNS server at:%v\n", address)
+
 	m.Lock()
 	DNSServers = append(DNSServers, fmt.Sprintf("%v", address))
 	m.Unlock()
@@ -242,7 +242,6 @@ func getHostNames(addresses []string, r *net.Resolver, wg *sync.WaitGroup, ctx c
 			continue
 		}
 		m.Lock()
-		//fmt.Printf("\nHost found: %v ip: %v", names, ipAddress)
 		Hostnames = append(Hostnames, map[string][]string{ipAddress: names})
 		m.Unlock()
 	}
