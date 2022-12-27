@@ -13,10 +13,24 @@ import (
 	"time"
 )
 
+// Progress Bar code used from:
+// https://www.pixelstech.net/article/1596946473-A-simple-example-on-implementing-progress-bar-in-GoLang
+
+type Bar struct {
+	percent int64  // progress percentage
+	cur     int64  // current progress
+	total   int64  // total value for progress
+	rate    string // the actual progress bar to be printed
+	graph   string // the fill value for progress bar
+}
+
 var (
-	Hostnames  []map[string][]string
-	DNSServers []string
-	m          sync.Mutex
+	Hostnames         []map[string][]string
+	DNSServers        []string
+	m                 sync.Mutex
+	bar               Bar
+	addressesComplete int64
+	numOfAddresses    int64
 )
 
 func main() {
@@ -25,16 +39,62 @@ func main() {
 
 	start, finish := parseCIDRNotation(networkMask)
 	addresses := getaddresses(start, finish)
-
+	numOfAddresses = int64(len(addresses))
 	ipAddressSlices := getIPSlices(threads, addresses)
-	fmt.Printf("Number of slices: %d\n", len(ipAddressSlices))
-
+	go calculateBar()
 	if findDnsServers {
 		findDns(ipAddressSlices)
 	} else {
 		doOutput(ipAddressSlices, dnsServerIp, ctx)
 	}
 
+}
+
+func calculateBar() {
+
+	addressesComplete = 0
+	bar.NewOption(0, numOfAddresses)
+
+	for {
+		if addressesComplete >= numOfAddresses {
+			break
+		}
+		time.Sleep(100 * time.Millisecond)
+		bar.Play(addressesComplete)
+	}
+}
+
+func (bar *Bar) NewOption(start, total int64) {
+	bar.cur = start
+	bar.total = total
+	if bar.graph == "" {
+		bar.graph = "=>"
+	}
+	bar.percent = bar.getPercent()
+	for i := 0; i < int(bar.percent); i += 2 {
+		bar.rate += bar.graph // initial progress position
+	}
+}
+
+func (bar *Bar) getPercent() int64 {
+	return int64((float32(bar.cur) / float32(bar.total)) * 50)
+}
+
+func (bar *Bar) Play(cur int64) {
+	bar.cur = cur
+	last := bar.percent
+	bar.percent = bar.getPercent()
+	if bar.percent != last {
+		var i int64 = 0
+		for ; i < bar.percent-last; i++ {
+			bar.rate += bar.graph
+		}
+		fmt.Printf("\r[%-50s]%3d%% %8d/%d", bar.rate, bar.percent*2, bar.cur, bar.total)
+	}
+}
+
+func (bar *Bar) Finish() {
+	fmt.Println()
 }
 
 func findDns(ipAddressSlices [][]string) {
@@ -45,6 +105,8 @@ func findDns(ipAddressSlices [][]string) {
 		go getDns(ipSlice, wg)
 	}
 	wg.Wait()
+	bar.Play(numOfAddresses)
+	bar.Finish()
 	timeFinish := time.Now()
 	hosts, _ := json.Marshal(DNSServers)
 	fmt.Printf("\nTime: %v\nDNS Servers: %v", timeFinish.Sub(timeStart), string(hosts))
@@ -65,11 +127,12 @@ func getDns(ipSlice []string, wg *sync.WaitGroup) {
 func doDnsOutput(address string, wg *sync.WaitGroup) {
 	defer wg.Done()
 	conn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:53", address), time.Second*time.Duration(1))
+	addressesComplete++
 	if err != nil && conn == nil {
 		return
 	}
 	_ = conn.Close()
-	fmt.Printf("Found DNS server at:%v\n", address)
+
 	m.Lock()
 	DNSServers = append(DNSServers, fmt.Sprintf("%v", address))
 	m.Unlock()
@@ -93,6 +156,8 @@ func doOutput(ipAddressSlices [][]string, dnsServerIp string, ctx context.Contex
 		go getHostNames(ipSlice, r, wg, ctx)
 	}
 	wg.Wait()
+	bar.Play(numOfAddresses)
+	bar.Finish()
 	timeFinish := time.Now()
 	hosts, _ := json.Marshal(Hostnames)
 	fmt.Printf("\nTime: %v\nHostnames: %v", timeFinish.Sub(timeStart), string(hosts))
@@ -172,11 +237,11 @@ func getHostNames(addresses []string, r *net.Resolver, wg *sync.WaitGroup, ctx c
 	}
 	for _, ipAddress := range addresses {
 		names, err := r.LookupAddr(ctx, ipAddress)
+		addressesComplete++
 		if err != nil || len(names) == 0 {
 			continue
 		}
 		m.Lock()
-		fmt.Printf("\nHost found: %v ip: %v", names, ipAddress)
 		Hostnames = append(Hostnames, map[string][]string{ipAddress: names})
 		m.Unlock()
 	}
