@@ -30,6 +30,13 @@ Command line options
 #### Windows
 `reverse-dns-enum.exe -n 192.168.1.255/24 -f true`
 
+Example output:
+```azure
+[>=>=>=>=>=>=>=>=>=>=>=>=>=>=>=>=>=>=>=>=>=>=>]100%      256/256
+Time: 1.052932236s
+DNS Servers: ["192.168.2.1"]    
+```
+
 ### Find hosts with given DNS Server
 #### Linux
 `./reverse-dns-enum -d 192.168.1.1 -n 192.168.1.255/24`
@@ -40,9 +47,7 @@ Command line options
 
 Example output:
 ```azure
-Host found: [domain1.localdomain.] ip: 192.168.1.42
-Host found: [domain2.localdomain.] ip: 192.168.1.76
-Host found: [domain3.localdomain.] ip: 192.168.1.81
+[=>=>=>=>=>=>=>=>=>=>=>=>=>=>=>=>=>=>=>=>]100%      256/256
 Time: 4.086481587s
 Hostnames: [{"192.168.1.42":["domain1.localdomain."]},{"192.168.1.76":["domain2.localdomain."]},{"192.168.1.81":["domain3.localdomain."]}}]
 ```
