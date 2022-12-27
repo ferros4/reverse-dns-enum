@@ -243,7 +243,6 @@ func getHostNames(addresses []string, r *net.Resolver, wg *sync.WaitGroup, ctx c
 		}
 		m.Lock()
 		//fmt.Printf("\nHost found: %v ip: %v", names, ipAddress)
-		addressesComplete++
 		Hostnames = append(Hostnames, map[string][]string{ipAddress: names})
 		m.Unlock()
 	}
