@@ -62,4 +62,4 @@ Depending on the number of IPs to check, this list will be divided by the number
 #### Windows
 `GOOS=windows go build -o reverse-dns-enum.exe`
 #### Linux
-`go build -o reverse-dns-enum.exe`
+`go build -o reverse-dns-enum.sh`
